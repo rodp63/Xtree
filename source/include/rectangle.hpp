@@ -3,10 +3,9 @@
 #include <climits>
 #include <algorithm>
 #include <utility>
-#include <vector>
 
 template<size_t N>
-class rectangle {
+class Rectangle {
 
   typedef std::pair<float, float> interval;
   
@@ -19,38 +18,39 @@ class rectangle {
   iterator begin();
   iterator end();
   
-  rectangle& operator=(rectangle<N> &rect);
+  Rectangle& operator=(Rectangle<N> &rect);
   interval& operator[](size_t idx);
 
   float get_area();
   void reset();
-  void adjust(rectangle<N> &rect);
+  void adjust(Rectangle<N> &rect);
+  float get_overlap(Rectangle<N> &rect);
   
 };
 
 template<size_t N>
-typename rectangle<N>::iterator rectangle<N>::begin() {
+typename Rectangle<N>::iterator Rectangle<N>::begin() {
   return bounds;
 }
 
 template<size_t N>
-typename rectangle<N>::iterator rectangle<N>::end() {
+typename Rectangle<N>::iterator Rectangle<N>::end() {
   return bounds + N;
 }
 
 template<size_t N>
-rectangle<N>& rectangle<N>::operator=(rectangle<N> &rect) {
+Rectangle<N>& Rectangle<N>::operator=(Rectangle<N> &rect) {
   std::copy(rect.begin(), rect.end(), begin());
   return *this;
 }
 
 template<size_t N>
-typename rectangle<N>::interval& rectangle<N>::operator[](size_t idx) {
+typename Rectangle<N>::interval& Rectangle<N>::operator[](size_t idx) {
   return bounds[idx];
 }
 
 template<size_t N>
-float rectangle<N>::get_area() {
+float Rectangle<N>::get_area() {
   float area = 1;
   for(size_t i = 0; i < N; ++i) {
     area *= ((*this)[i].second - (*this)[i].first);
@@ -59,7 +59,7 @@ float rectangle<N>::get_area() {
 }
 
 template<size_t N>
-void rectangle<N>::reset() {
+void Rectangle<N>::reset() {
   for(size_t i = 0; i < N; ++i) {
     (*this)[i].first = LONG_MAX;
     (*this)[i].second = LONG_MIN;
@@ -67,10 +67,20 @@ void rectangle<N>::reset() {
 }
 
 template<size_t N>
-void rectangle<N>::adjust(rectangle<N> &rect) {
+void Rectangle<N>::adjust(Rectangle<N> &rect) {
   for(size_t i = 0; i < N; ++i) {
     (*this)[i].first = std::min((*this)[i].first, rect[i].first);
     (*this)[i].second = std::max((*this)[i].second, rect[i].second);
   }
 }
 
+template<size_t N>
+float Rectangle<N>::get_overlap(Rectangle<N> &rect) {
+  float area = 1;
+  for(size_t i = 0; i < N; ++i) {
+    float left = std::max((*this)[i].first, rect[i].first);
+    float right = std::min((*this)[i].second, rect[i].second);
+    area *= std::max(float(0), right - left);
+  }
+  return area;
+}
