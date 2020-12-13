@@ -15,9 +15,10 @@ int main() {
   B[0].second = 15;
   B[1].second = 15;
   cout<<B.get_overlap(A)<<endl;
+  cout<<B.get_margin()<<endl;
   
   Xtree<int, 2, 5> ttt;
   const int a = 11;
-  int x = 1;
-  ttt.insert(A, 69);
+  int x = 111;
+  ttt.insert(A, 111);
 }
