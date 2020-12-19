@@ -22,10 +22,14 @@ struct Xtree {
       SHNode();
     };
     
-    SplitHistory(size_t mult);
+    SplitHistory(size_t mul);
     void insert(size_t axis, size_t a, size_t b);
-    size_t get_and_split();
-
+    void dfs(const SHNode &cur, std::vector<size_t> &values);
+    
+    size_t get_and_test(std::vector<size_t> &left_values,
+                      std::vector<size_t> &right_values);
+    std::shared_ptr<SplitHistory> split(std::vector<size_t> &left_values,
+                                        std::vector<size_t> &right_values);
     std::shared_ptr<SHNode> root;
     std::vector<std::shared_ptr<SHNode> > node_ptr;
     size_t node_capacity;
@@ -73,7 +77,6 @@ struct Xtree {
   size_t dimension() const;
   size_t size() const;
   bool empty() const;
-  void print();
 
   void insert(const Point<N> point, const T data);
   
@@ -101,6 +104,7 @@ struct Xtree {
   std::vector<std::pair<Point<N>, T> > KNNquery(const Point<N> &query_point, const size_t k);
 
   size_t tree_entries;
+  size_t count;
   std::priority_queue<std::pair<float, std::shared_ptr<Cell> > > knn;
   std::shared_ptr<Node> root;
   
@@ -112,8 +116,8 @@ template<typename T, size_t N, size_t M, size_t m>
 Xtree<T, N, M, m>::SplitHistory::SHNode::SHNode() : left(nullptr), right(nullptr), leaf(1) {}
 
 template<typename T, size_t N, size_t M, size_t m>
-Xtree<T, N, M, m>::SplitHistory::SplitHistory(size_t mult) : root(std::make_shared<SHNode>()) {
-  node_capacity = M * mult;
+Xtree<T, N, M, m>::SplitHistory::SplitHistory(size_t mul) : root(std::make_shared<SHNode>()) {
+  node_capacity = M * mul;
   root->value = 0;
   node_ptr.resize(node_capacity);
   node_ptr[0] = root;
@@ -130,6 +134,18 @@ void Xtree<T, N, M, m>::SplitHistory::insert(size_t axis, size_t a, size_t b) {
   parent->right->value = b;
   node_ptr[a] = parent->left;
   node_ptr[b] = parent->right;
+}
+
+template<typename T, size_t N, size_t M, size_t m>
+void Xtree<T, N, M, m>::SplitHistory::dfs(const SHNode &cur, std::vector<size_t> &values) {
+  
+}
+
+template<typename T, size_t N, size_t M, size_t m>
+size_t Xtree<T, N, M, m>::SplitHistory::get_and_test(std::vector<size_t> &left_values,
+                                                   std::vector<size_t> &right_values) {
+  size_t sp_axis = root->value;
+  
 }
 
 // Node implementation!!
@@ -295,6 +311,9 @@ Xtree<T, N, M, m>::Node::topological_split(const Cell &new_entry, size_t &split_
 template<typename T, size_t N, size_t M, size_t m>
 std::shared_ptr<typename Xtree<T, N, M, m>::Node>
 Xtree<T, N, M, m>::Node::overlap_min_split(const Cell &new_entry, size_t &split_axis) {
+  if (split_tree) {
+    
+  }
   return nullptr;
 }
 
@@ -317,7 +336,6 @@ Xtree<T, N, M, m>::Node::insert(const Cell &new_entry, size_t &split_axis) {
   if(new_node)
     return new_node;
   //Create supernode
-  std::cout<<"SuperNode!!!!\n";
   multiplier++;
   entry.push_back(new_entry);
   size++;
@@ -484,6 +502,7 @@ template<typename T, size_t N, size_t M, size_t m>
 void Xtree<T, N, M, m>::KNNsearch(const std::shared_ptr<Node> current_node,
                                   const Point<N> &query_point) {
   if (current_node->is_leaf()) {
+    count++;
     for (Cell &cur_entry : current_node->entry) {
       float dist = cur_entry.MBR.MINDIST(query_point);
       if (dist < knn.top().first) {
@@ -512,7 +531,9 @@ std::vector<std::pair<Point<N>, T> > Xtree<T, N, M, m>::KNNquery(const Point<N> 
   for (size_t i = 0; i < k; ++i) {
     knn.push(std::make_pair(std::numeric_limits<float>::max(), nullptr));
   }
+  count = 0;
   KNNsearch(root, query_point);
+  std::cout<<"Visited Songs: "<<count<<std::endl;
   std::vector<std::pair<Point<N>, T> > result;
   while(!knn.empty()) {
     std::shared_ptr<Cell> cur = knn.top().second;
@@ -525,32 +546,4 @@ std::vector<std::pair<Point<N>, T> > Xtree<T, N, M, m>::KNNquery(const Point<N> 
   }
   std::reverse(result.begin(), result.end());
   return result;
-}
-
-template<typename T, size_t N, size_t M, size_t m>
-void Xtree<T, N, M, m>::print() {
-  std::cout<<"Printing the tree ...";
-  int lastLvl = -1;
-  std::queue<std::pair<std::shared_ptr<Node>, int> > Q;
-  Q.push(make_pair(root, 0));
-  while (!Q.empty()) {
-    std::shared_ptr<Node> current = Q.front().first;
-    int lvl = Q.front().second;
-    Q.pop();
-    if (lvl != lastLvl) {
-      std::cout<<std::endl;
-      lastLvl = lvl;
-    }
-    std::cout<<"{ | ";
-    for (Cell &obj : *current) {
-      std::cout<<(obj.data ? *(obj.data) : -1);
-      std::cout<<":("<<obj.MBR[0].first<<","<<obj.MBR[0].second<<") - ";
-      std::cout<<"("<<obj.MBR[1].first<<","<<obj.MBR[1].second<<") | ";
-      if (!current->is_leaf()) {
-        Q.push(make_pair(obj.child, lvl+1));
-      }
-    }
-    std::cout<<"} ";    
-  }
-  std::cout<<"\n";
 }

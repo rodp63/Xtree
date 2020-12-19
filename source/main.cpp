@@ -4,7 +4,9 @@
 #include <memory>
 #include <utility>
 #include <vector>
+#include <map>
 #include <fstream>
+#include <cmath>
 
 #include "rectangle.hpp"
 #include "xtree.hpp"
@@ -13,12 +15,9 @@
 #define POINTS 170653
 #define PATH "../spotify_dataset.csv"
 
-const float max_2 = 350000.0; // duration_ms
-const float max_8 = 60.0; // loudness
-const float max_12 = 244.0; // tempo
-
-
 typedef std::pair<int, std::string> data_type;
+
+std::map<size_t, float> normalizer;
 
 template <typename>
 class Timer;
@@ -68,9 +67,9 @@ int build_data_structure() {
     for (size_t i = 0; i < DIM; ++i) {
       points >> pt[i];
     }
-    pt[2] /= max_2;
-    pt[8] /= max_8;
-    pt[12] /= max_12;
+    for (std::pair<size_t,float> norm : normalizer) {
+      pt[norm.first] /= norm.second;
+    }
     // Get song data
     points >> year;
     getline(points, info);
@@ -97,6 +96,13 @@ std::vector<std::vector<float>> query_knn(std::vector<float> query, int k) {
 }
 
 int main() {
+  // Normalize values
+  normalizer[2] = 350000.0; // duration_ms
+  normalizer[6] = 11.0; // key
+  normalizer[8] = 60.0; // loudness
+  normalizer[10] = 100.0; // popularity
+  normalizer[12] = 244.0; // tempo
+  
   std::cout<<"---------------------------------------------"<<std::endl;
   std::cout<<"---------- X Tree by Joaquin Palma ----------"<<std::endl;
   std::cout<<"---------------------------------------------"<<std::endl;
@@ -104,7 +110,7 @@ int main() {
   
   Timer<int()> timed_built(build_data_structure, "Index");
   timed_built();
-  
+
   std::cout<<"\n-------- K Nearest Neighbors Queries --------\n"<<std::endl;
   while (true) {
     Timer<std::vector<std::vector<float>>(std::vector<float>, int)> timed_query(
@@ -116,21 +122,28 @@ int main() {
     for (size_t i = 0; i < DIM; ++i) {
       std::cin>>query[i];
     }
-    query[2] /= max_2;
-    query[8] /= max_8;
-    query[12] /= max_12;
+    for (std::pair<size_t,float> norm : normalizer) {
+      query[norm.first] /= norm.second;
+    }
     
     std::vector<std::vector<float>> result = timed_query(query, k);
-    
-    // Print Points
+
     for (int i = 0; i < k; ++i) {
-      result[i][2] *= max_2;
-      result[i][8] *= max_8;
-      result[i][12] *= max_12;
-      std::cout<<"   # { ";
+      // get normalized dist
+      float dist = 0;
+      for (size_t j = 0; j < DIM; ++j) {
+        dist += (result[i][j] - query[j]) * (result[i][j] - query[j]);
+      }
+      dist = sqrt(dist);
+      std::cout<<"   #"<<i+1<<" [";
+      std::cout<<std::fixed<<std::setprecision(5)<<dist;
+      std::cout<<"] : { ";
+      for (std::pair<size_t,float> norm : normalizer) {
+        result[i][norm.first] *= norm.second;
+      }
       for (int j = 0; j < DIM; ++j)
-        std::cout<<result[i][j]<<", ";
-      std::cout<<"}"<<std::endl;
+        std::cout<<std::fixed<<std::setprecision(3)<<result[i][j]<<" ";
+      std::cout<<"}\n";
     }
     std::cout<<'\n';
   }
