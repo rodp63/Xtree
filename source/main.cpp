@@ -15,7 +15,7 @@
 #define POINTS 170653
 #define PATH "../spotify_dataset.csv"
 
-typedef std::pair<int, std::string> data_type;
+typedef std::pair<int, std::string> data_type; // {year, name}
 
 std::map<size_t, float> normalizer;
 
@@ -40,7 +40,7 @@ class Timer<R(T...)> {
     end = std::chrono::high_resolution_clock::now();
     int64_t duration =
         std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
-            .count();
+        .count();
 
     std::cout << std::setw(10) << process_name_ << std::setw(30)
               << "Duration: " + std::to_string(duration) + " ns\n";
@@ -102,15 +102,15 @@ int main() {
   normalizer[11] = 100.0; // popularity
   normalizer[13] = 245.0; // tempo
   
-  std::cout<<"---------------------------------------------"<<std::endl;
-  std::cout<<"---------- X Tree by Joaquin Palma ----------"<<std::endl;
-  std::cout<<"---------------------------------------------"<<std::endl;
+  std::cout<<"*---------------------------------------------*"<<std::endl;
+  std::cout<<"*---------- X Tree by Joaquin Palma ----------*"<<std::endl;
+  std::cout<<"*---------------------------------------------*"<<std::endl;
   std::cout<<"|> Inserting Points ... "<<std::endl;
   
   Timer<int()> timed_built(build_data_structure, "Index");
   timed_built();
 
-  std::cout<<"\n-------- K Nearest Neighbors Queries --------\n"<<std::endl;
+  std::cout<<"\n*-------- K Nearest Neighbors Queries --------*\n"<<std::endl;
   while (true) {
     Timer<std::vector<std::vector<float>>(std::vector<float>, int)> timed_query(
         query_knn, "Query KNN");

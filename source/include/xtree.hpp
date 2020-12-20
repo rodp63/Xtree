@@ -362,7 +362,6 @@ size_t Xtree<T, N, M, m>::Node::choose_split_index(const Cell &new_entry,
       index = i;
     }
   }
-  //std::cout<<" # Overlap split: "<<minimum_overlap<<std::endl;
   return overlap_percentage > MAX_OVERLAP ? -1 : index;
 }
 
@@ -446,7 +445,7 @@ Xtree<T, N, M, m>::Node::insert(const Cell &new_entry, size_t &split_axis) {
   new_node = overlap_min_split(new_entry, split_axis);
   if(new_node)
     return new_node;
-  //Create supernode
+  // Create supernode
   multiplier++;
   entry.push_back(new_entry);
   size++;
