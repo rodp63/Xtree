@@ -17,22 +17,32 @@ struct Xtree {
   struct SplitHistory {
     struct SHNode {
       size_t value;
+      size_t color;
       bool leaf;
       std::shared_ptr<SHNode> left, right;
       SHNode();
     };
+
+    SplitHistory();
+
+    std::shared_ptr<SHNode> find(const std::shared_ptr<SHNode> &cur, size_t leaf_value);
+    void insert(const size_t axis, const size_t a, const size_t b);
+    void dfs(const std::shared_ptr<SHNode> &cur, std::vector<size_t> &values);
     
-    SplitHistory(size_t mul);
-    void insert(size_t axis, size_t a, size_t b);
-    void dfs(const SHNode &cur, std::vector<size_t> &values);
+    size_t coloring(const std::shared_ptr<SHNode> &cur,
+                    const std::vector<size_t> &values);
+    
+    void distribute(std::shared_ptr<SHNode> *new_node,
+                    const std::shared_ptr<SHNode> &cur);
     
     size_t get_and_test(std::vector<size_t> &left_values,
-                      std::vector<size_t> &right_values);
-    std::shared_ptr<SplitHistory> split(std::vector<size_t> &left_values,
-                                        std::vector<size_t> &right_values);
+                        std::vector<size_t> &right_values);
+    
+    void split(std::vector<size_t> &left_values, std::vector<size_t> &right_values,
+               std::shared_ptr<SplitHistory> &s1, std::shared_ptr<SplitHistory> &s2);
+
     std::shared_ptr<SHNode> root;
-    std::vector<std::shared_ptr<SHNode> > node_ptr;
-    size_t node_capacity;
+    size_t new_idx;
   };
   
   struct Cell {
@@ -116,43 +126,117 @@ template<typename T, size_t N, size_t M, size_t m>
 Xtree<T, N, M, m>::SplitHistory::SHNode::SHNode() : left(nullptr), right(nullptr), leaf(1) {}
 
 template<typename T, size_t N, size_t M, size_t m>
-Xtree<T, N, M, m>::SplitHistory::SplitHistory(size_t mul) : root(std::make_shared<SHNode>()) {
-  node_capacity = M * mul;
-  root->value = 0;
-  node_ptr.resize(node_capacity);
-  node_ptr[0] = root;
+Xtree<T, N, M, m>::SplitHistory::SplitHistory() {}
+
+template<typename T, size_t N, size_t M, size_t m>
+std::shared_ptr<typename Xtree<T, N, M, m>::SplitHistory::SHNode>
+Xtree<T, N, M, m>::SplitHistory::find(const std::shared_ptr<SHNode> &cur, size_t leaf_value) {
+  if(!cur) return nullptr;
+  if (cur->leaf) {
+    return (cur->value == leaf_value ? cur : nullptr);
+  }
+  std::shared_ptr<SHNode> lpt = find(cur->left, leaf_value);
+  if (lpt) return lpt;
+  std::shared_ptr<SHNode> rpt = find(cur->right, leaf_value);
+  if (rpt) return rpt;
+  return nullptr;
 }
 
 template<typename T, size_t N, size_t M, size_t m>
-void Xtree<T, N, M, m>::SplitHistory::insert(size_t axis, size_t a, size_t b) {
-  std::shared_ptr<SHNode> parent = node_ptr[a];
+void Xtree<T, N, M, m>::SplitHistory::insert(const size_t axis, const size_t a, const size_t b) {
+  std::shared_ptr<SHNode> parent = find(root, a);
+  if (!parent) return;
   parent->left = std::make_shared<SHNode>();
   parent->right = std::make_shared<SHNode>();
   parent->leaf = false;
   parent->value = axis;
   parent->left->value = a;
   parent->right->value = b;
-  node_ptr[a] = parent->left;
-  node_ptr[b] = parent->right;
 }
 
 template<typename T, size_t N, size_t M, size_t m>
-void Xtree<T, N, M, m>::SplitHistory::dfs(const SHNode &cur, std::vector<size_t> &values) {
-  
+void Xtree<T, N, M, m>::SplitHistory::dfs(const std::shared_ptr<SHNode> &cur,
+                                          std::vector<size_t> &values) {
+  if(!cur) return;
+  if (cur->leaf) {
+    values.push_back(cur->value);
+  }
+  else {
+    dfs(cur->left, values);
+    dfs(cur->right, values);
+  }
 }
 
 template<typename T, size_t N, size_t M, size_t m>
 size_t Xtree<T, N, M, m>::SplitHistory::get_and_test(std::vector<size_t> &left_values,
-                                                   std::vector<size_t> &right_values) {
+                                                     std::vector<size_t> &right_values) {
+  if(!root) return -1;
   size_t sp_axis = root->value;
-  
+  dfs(root->left, left_values);
+  dfs(root->right, right_values);
+  return sp_axis;
+}
+
+template<typename T, size_t N, size_t M, size_t m>
+size_t Xtree<T, N, M, m>::SplitHistory::coloring(const std::shared_ptr<SHNode> &cur,
+                                                 const std::vector<size_t> &values) {
+  if(!cur) return 0;
+  if (cur->leaf) {
+    cur->color = (std::find(values.begin(), values.end(), cur->value) == values.end() ? 0 : 2);
+    return cur->color;
+  }
+  size_t a = coloring(cur->left, values);
+  size_t b = coloring(cur->right, values);
+  cur->color = !!(a) + !!(b);
+  return cur->color;
+}
+
+template<typename T, size_t N, size_t M, size_t m>
+void Xtree<T, N, M, m>::SplitHistory::distribute(std::shared_ptr<SHNode> *new_node,
+                                                 const std::shared_ptr<SHNode> &cur) {
+  if (!cur) return;
+  if (cur->color == 2) {
+    (*new_node) = std::make_shared<SHNode>();
+    (*new_node)->value = cur->leaf ? new_idx++ : cur->value;
+    (*new_node)->leaf = cur->leaf;
+    if (!cur->leaf) {
+      distribute(&((*new_node)->left), cur->left);
+      distribute(&((*new_node)->right), cur->right);
+    }
+    return;
+  }
+  if (!cur->leaf) {
+    if (cur->left->color) {
+      distribute(new_node, cur->left);
+    }
+    else {
+      distribute(new_node, cur->right);
+    }
+  }
+}
+
+template<typename T, size_t N, size_t M, size_t m>
+void Xtree<T, N, M, m>::SplitHistory::split(std::vector<size_t> &left_values,
+                                            std::vector<size_t> &right_values,
+                                            std::shared_ptr<SplitHistory> &s1,
+                                            std::shared_ptr<SplitHistory> &s2) {
+  std::shared_ptr<SplitHistory> new_s1, new_s2;
+  new_s1 = std::make_shared<SplitHistory>();
+  new_s2 = std::make_shared<SplitHistory>();
+  coloring(root, left_values);
+  new_idx = 0;
+  distribute(&(new_s1->root), root);
+  coloring(root, right_values);
+  new_idx = 0;
+  distribute(&(new_s2->root), root);
+  s1 = new_s1;
+  s2 = new_s2;
 }
 
 // Node implementation!!
 
 template<typename T, size_t N, size_t M, size_t m>
-Xtree<T, N, M, m>::Node::Node(size_t mult) : size(0), multiplier(mult) {}
-
+Xtree<T, N, M, m>::Node::Node(size_t mult) : size(0), multiplier(mult), split_tree(nullptr) {}
 
 template<typename T, size_t N, size_t M, size_t m>
 typename Xtree<T, N, M, m>::Node::iterator
@@ -293,15 +377,23 @@ Xtree<T, N, M, m>::Node::topological_split(const Cell &new_entry, size_t &split_
     std::shared_ptr<Node> new_node = std::make_shared<Node>(multiplier);
     size_t M_val = max_size();
     size_t m_val = min_size();
+    std::vector<size_t> oleft, oright;
     std::vector<Cell> tmp = entry;
     tmp.push_back(new_entry);
     entry.clear();
-    for (size_t ff = 0; ff < m_val + index; ++ff)
+    for (size_t ff = 0; ff < m_val + index; ++ff) {
       entry.push_back(tmp[axis_order[ff]]);
-    for (size_t ss = m_val + index; ss < M_val + 1; ++ss)
+      oleft.push_back(axis_order[ff]);
+    }
+    for (size_t ss = m_val + index; ss < M_val + 1; ++ss) {
       new_node->entry.push_back(tmp[axis_order[ss]]);
+      oright.push_back(axis_order[ss]);
+    }
     size = entry.size();
     new_node->size = new_node->entry.size();
+    if (split_tree) {
+      split_tree->split(oleft, oright, split_tree, new_node->split_tree);
+    }
     split_axis = axis;
     return new_node;
   }
@@ -312,7 +404,26 @@ template<typename T, size_t N, size_t M, size_t m>
 std::shared_ptr<typename Xtree<T, N, M, m>::Node>
 Xtree<T, N, M, m>::Node::overlap_min_split(const Cell &new_entry, size_t &split_axis) {
   if (split_tree) {
-    
+    std::vector<size_t> oleft, oright;
+    size_t m_val = min_size();
+    size_t axis = split_tree->get_and_test(oleft, oright);
+    if (oleft.size() + oright.size() - 1 == size
+        && oleft.size() >= m_val && oright.size() >= m_val) {
+      std::shared_ptr<Node> new_node = std::make_shared<Node>(multiplier);
+      std::vector<Cell> tmp = entry;
+      tmp.push_back(new_entry);
+      entry.clear();
+      for (size_t ff : oleft) {
+        entry.push_back(tmp[ff]);
+      }
+      for (size_t ss : oright) {
+        new_node->entry.push_back(tmp[ss]);
+      }
+      size = entry.size();
+      new_node->size = new_node->entry.size();
+      split_tree->split(oleft, oright, split_tree, new_node->split_tree);
+      split_axis = axis;
+    }
   }
   return nullptr;
 }
@@ -377,7 +488,9 @@ void Xtree<T, N, M, m>::insert(const Point<N> point, const T data) {
     return;
   // Split the root !
   std::shared_ptr<Node> new_root = std::make_shared<Node>(1);
-  new_root->split_tree = std::make_shared<SplitHistory>(1);
+  new_root->split_tree = std::make_shared<SplitHistory>();
+  new_root->split_tree->root = std::make_shared<typename SplitHistory::SHNode>();
+  new_root->split_tree->root->value = 0;
   Cell new_entry;
   new_entry.child = root;
   new_root->insert(new_entry, tmp);
@@ -488,7 +601,9 @@ Xtree<T, N, M, m>::adjust_tree(const std::shared_ptr<Node> &parent,
   if (!right) {
     return nullptr;
   }
-  //parent->split_tree->insert(split_axis, cell_pos, parent->size);
+  if (parent->split_tree) {
+    parent->split_tree->insert(split_axis, cell_pos, parent->size);
+  }
   Cell new_entry;
   new_entry.MBR.reset();
   for (Cell &current_entry : *right) {

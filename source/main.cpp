@@ -74,7 +74,6 @@ int build_data_structure() {
     points >> year;
     getline(points, info);
     Cake.insert(pt, std::make_pair(year, info));
-    //std::cout<<Cake.size()<<std::endl;
   }
   return 0;
 }
@@ -97,11 +96,11 @@ std::vector<std::vector<float>> query_knn(std::vector<float> query, int k) {
 
 int main() {
   // Normalize values
-  normalizer[2] = 350000.0; // duration_ms
-  normalizer[6] = 11.0; // key
-  normalizer[8] = 60.0; // loudness
-  normalizer[10] = 100.0; // popularity
-  normalizer[12] = 244.0; // tempo
+  normalizer[3] = 350000.0; // duration_ms
+  normalizer[7] = 11.0; // key
+  normalizer[9] = 60.0; // loudness
+  normalizer[11] = 100.0; // popularity
+  normalizer[13] = 245.0; // tempo
   
   std::cout<<"---------------------------------------------"<<std::endl;
   std::cout<<"---------- X Tree by Joaquin Palma ----------"<<std::endl;
@@ -137,12 +136,12 @@ int main() {
       dist = sqrt(dist);
       std::cout<<"   #"<<i+1<<" [";
       std::cout<<std::fixed<<std::setprecision(5)<<dist;
-      std::cout<<"] : { ";
+      std::cout<<"] -> { ";
       for (std::pair<size_t,float> norm : normalizer) {
         result[i][norm.first] *= norm.second;
       }
       for (int j = 0; j < DIM; ++j)
-        std::cout<<std::fixed<<std::setprecision(3)<<result[i][j]<<" ";
+        std::cout<<std::fixed<<std::setprecision(4)<<result[i][j]<<" ";
       std::cout<<"}\n";
     }
     std::cout<<'\n';
