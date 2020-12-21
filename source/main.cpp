@@ -7,6 +7,7 @@
 #include <map>
 #include <fstream>
 #include <cmath>
+#include <chrono>
 
 #include "rectangle.hpp"
 #include "xtree.hpp"
